@@ -18,7 +18,7 @@ typedef NSDictionary WVJBMessage;
 
 @implementation WebViewJavascriptBridge {
     WVJB_WEAK WVJB_WEBVIEW_TYPE* _webView;
-    WVJB_WEAK id _webViewDelegate;
+    WVJB_WEAK id _webViewDelegate_jv;
     NSMutableArray* _startupMessageQueue;
     NSMutableDictionary* _responseCallbacks;
     NSMutableDictionary* _messageHandlers;
@@ -32,6 +32,10 @@ typedef NSDictionary WVJBMessage;
 #endif
     
 }
+
+//__strong typeof(_webViewDelegate_jv) strongDelegate = _webViewDelegate_jv
+//TODO: to modify it back with strong reference
+#define strongDelegate _webViewDelegate_jv
 
 /* API
  *****/
@@ -92,7 +96,7 @@ static bool logging = false;
     [self _platformSpecificDealloc];
     
     _webView = nil;
-    _webViewDelegate = nil;
+    _webViewDelegate_jv = nil;
     _startupMessageQueue = nil;
     _responseCallbacks = nil;
     _messageHandlers = nil;
@@ -238,7 +242,7 @@ static bool logging = false;
 - (void) _platformSpecificSetup:(WVJB_WEBVIEW_TYPE*)webView webViewDelegate:(WVJB_WEBVIEW_DELEGATE_TYPE*)webViewDelegate handler:(WVJBHandler)messageHandler resourceBundle:(NSBundle*)bundle{
     _messageHandler = messageHandler;
     _webView = webView;
-    _webViewDelegate = webViewDelegate;
+    _webViewDelegate_jv = webViewDelegate;
     _messageHandlers = [NSMutableDictionary dictionary];
     
     _webView.frameLoadDelegate = self;
@@ -272,16 +276,16 @@ static bool logging = false;
         _startupMessageQueue = nil;
     }
     
-    if (_webViewDelegate && [_webViewDelegate respondsToSelector:@selector(webView:didFinishLoadForFrame:)]) {
-        [_webViewDelegate webView:webView didFinishLoadForFrame:frame];
+    if (_webViewDelegate_jv && [_webViewDelegate_jv respondsToSelector:@selector(webView:didFinishLoadForFrame:)]) {
+        [_webViewDelegate_jv webView:webView didFinishLoadForFrame:frame];
     }
 }
 
 - (void)webView:(WebView *)webView didFailLoadWithError:(NSError *)error forFrame:(WebFrame *)frame {
     if (webView != _webView) { return; }
     
-    if (_webViewDelegate && [_webViewDelegate respondsToSelector:@selector(webView:didFailLoadWithError:forFrame:)]) {
-        [_webViewDelegate webView:webView didFailLoadWithError:error forFrame:frame];
+    if (_webViewDelegate_jv && [_webViewDelegate_jv respondsToSelector:@selector(webView:didFailLoadWithError:forFrame:)]) {
+        [_webViewDelegate_jv webView:webView didFailLoadWithError:error forFrame:frame];
     }
 }
 
@@ -297,8 +301,8 @@ static bool logging = false;
             NSLog(@"WebViewJavascriptBridge: WARNING: Received unknown WebViewJavascriptBridge command %@://%@", kCustomProtocolScheme, [url path]);
         }
         [listener ignore];
-    } else if (_webViewDelegate && [_webViewDelegate respondsToSelector:@selector(webView:decidePolicyForNavigationAction:request:frame:decisionListener:)]) {
-        [_webViewDelegate webView:webView decidePolicyForNavigationAction:actionInformation request:request frame:frame decisionListener:listener];
+    } else if (_webViewDelegate_jv && [_webViewDelegate_jv respondsToSelector:@selector(webView:decidePolicyForNavigationAction:request:frame:decisionListener:)]) {
+        [_webViewDelegate_jv webView:webView decidePolicyForNavigationAction:actionInformation request:request frame:frame decisionListener:listener];
     } else {
         [listener use];
     }
@@ -307,16 +311,16 @@ static bool logging = false;
 - (void)webView:(WebView *)webView didCommitLoadForFrame:(WebFrame *)frame {
     if (webView != _webView) { return; }
     
-    if (_webViewDelegate && [_webViewDelegate respondsToSelector:@selector(webView:didCommitLoadForFrame:)]) {
-        [_webViewDelegate webView:webView didCommitLoadForFrame:frame];
+    if (_webViewDelegate_jv && [_webViewDelegate_jv respondsToSelector:@selector(webView:didCommitLoadForFrame:)]) {
+        [_webViewDelegate_jv webView:webView didCommitLoadForFrame:frame];
     }
 }
 
 - (NSURLRequest *)webView:(WebView *)webView resource:(id)identifier willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)redirectResponse fromDataSource:(WebDataSource *)dataSource {
     if (webView != _webView) { return request; }
     
-    if (_webViewDelegate && [_webViewDelegate respondsToSelector:@selector(webView:resource:willSendRequest:redirectResponse:fromDataSource:)]) {
-        return [_webViewDelegate webView:webView resource:identifier willSendRequest:request redirectResponse:redirectResponse fromDataSource:dataSource];
+    if (_webViewDelegate_jv && [_webViewDelegate_jv respondsToSelector:@selector(webView:resource:willSendRequest:redirectResponse:fromDataSource:)]) {
+        return [_webViewDelegate_jv webView:webView resource:identifier willSendRequest:request redirectResponse:redirectResponse fromDataSource:dataSource];
     }
     
     return request;
@@ -331,7 +335,7 @@ static bool logging = false;
 - (void) _platformSpecificSetup:(WVJB_WEBVIEW_TYPE*)webView webViewDelegate:(id<UIWebViewDelegate>)webViewDelegate handler:(WVJBHandler)messageHandler resourceBundle:(NSBundle*)bundle{
     _messageHandler = messageHandler;
     _webView = webView;
-    _webViewDelegate = webViewDelegate;
+    _webViewDelegate_jv = webViewDelegate;
     _messageHandlers = [NSMutableDictionary dictionary];
     _webView.delegate = self;
     _resourceBundle = bundle;
@@ -360,7 +364,7 @@ static bool logging = false;
         _startupMessageQueue = nil;
     }
     
-    __strong typeof(_webViewDelegate) strongDelegate = _webViewDelegate;
+    //__strong typeof(_webViewDelegate_jv) strongDelegate = _webViewDelegate_jv;
     if (strongDelegate && [strongDelegate respondsToSelector:@selector(webViewDidFinishLoad:)]) {
         [strongDelegate webViewDidFinishLoad:webView];
     }
@@ -371,7 +375,7 @@ static bool logging = false;
     
     _numRequestsLoading--;
     
-    __strong typeof(_webViewDelegate) strongDelegate = _webViewDelegate;
+    //__strong typeof(_webViewDelegate_jv) strongDelegate = _webViewDelegate_jv;
     if (strongDelegate && [strongDelegate respondsToSelector:@selector(webView:didFailLoadWithError:)]) {
         [strongDelegate webView:webView didFailLoadWithError:error];
     }
@@ -380,7 +384,6 @@ static bool logging = false;
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
     if (webView != _webView) { return YES; }
     NSURL *url = [request URL];
-    __strong typeof(_webViewDelegate) strongDelegate = _webViewDelegate;
     if ([[url scheme] isEqualToString:kCustomProtocolScheme]) {
         if ([[url host] isEqualToString:kQueueHasMessage]) {
             [self _flushMessageQueue];
@@ -400,7 +403,7 @@ static bool logging = false;
     
     _numRequestsLoading++;
     
-    __strong typeof(_webViewDelegate) strongDelegate = _webViewDelegate;
+    //__strong typeof(_webViewDelegate_jv) strongDelegate = _webViewDelegate_jv;
     if (strongDelegate && [strongDelegate respondsToSelector:@selector(webViewDidStartLoad:)]) {
         [strongDelegate webViewDidStartLoad:webView];
     }
